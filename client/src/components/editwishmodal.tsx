@@ -5,15 +5,28 @@ import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Form, FormField, FormItem, FormMessage, FormControl, FormLabel } from "./ui/form";
-import { useMutation } from "@apollo/client";
-import { CREATE_WISH, GET_WISHES_BY_WISHLIST, GET_WISHLISTS_BY_USER } from "../queries";
-import { useContext, useState } from "react";
+import { useMutation, useQuery } from "@apollo/client";
+import { GET_WISHES_BY_WISHLIST, GET_WISHLISTS_BY_USER, GET_WISH_BY_ID, UPDATE_WISH } from "../queries";
+import { useContext, useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { UserContext } from "../App";
 import { Textarea } from "./ui/textarea";
 
 interface Props {
+	wish_id: string;
 	wishlist_id: string;
+	open: boolean;
+	setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+interface WishType {
+	id: string;
+	name: string;
+	img_url: string;
+	description: string;
+	link: string;
+	price: number;
+	order: number;
 }
 
 const formSchema = z.object({
@@ -24,35 +37,62 @@ const formSchema = z.object({
 	img_url: z.string().url({ message: "Required" }),
 });
 
-export function AddWishModal({ wishlist_id }: Props) {
+export function EditWishModal({ wish_id, wishlist_id, open, setOpen }: Props) {
 	const userContext = useContext(UserContext);
 	if (!userContext) return null;
 	const { user } = userContext;
 
-	const [createWish] = useMutation(CREATE_WISH);
-	const [open, setOpen] = useState(false);
+	const [updateWish] = useMutation(UPDATE_WISH);
+
+	const [wish, setWish] = useState<WishType>({
+		id: "",
+		name: "",
+		img_url: "",
+		description: "",
+		link: "",
+		price: 0,
+		order: 0,
+	});
+
+	const { data } = useQuery(GET_WISH_BY_ID, {
+		variables: { id: wish_id },
+	});
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
-		mode: "onSubmit", // change this to "onSubmit"
+		mode: "onSubmit",
 		defaultValues: {
-			name: "",
-			description: "",
-			price: 0,
-			link: "",
-			img_url: "",
+			name: wish.name,
+			description: wish.description,
+			price: wish.price,
+			link: wish.link,
+			img_url: wish.img_url,
 		},
 	});
+
+	useEffect(() => {
+		if (data) {
+			setWish(data.wish);
+
+			// Set default values after wish is updated
+			form.setValue("name", data.wish.name);
+			form.setValue("description", data.wish.description);
+			form.setValue("price", data.wish.price);
+			form.setValue("link", data.wish.link);
+			form.setValue("img_url", data.wish.img_url);
+		}
+	}, [data, form]);
 
 	function onSubmit(values: z.infer<typeof formSchema>) {
 		if (values.name === "" || values.description === "" || values.price === 0 || values.link === "" || values.img_url === "") {
 			return;
 		}
 
-		const toastId = toast.loading("Creating wish...");
+		const toastId = toast.loading("Editing wish...");
 
-		createWish({
+		updateWish({
 			variables: {
+				id: wish_id,
 				wishlist_id: wishlist_id,
 				name: values.name,
 				description: values.description,
@@ -74,23 +114,20 @@ export function AddWishModal({ wishlist_id }: Props) {
 			.then(() => {
 				setOpen(false);
 				form.reset();
-				toast.success("Wish created!", { id: toastId });
+				toast.success("Wish edited!", { id: toastId });
 			})
 			.catch(() => {
 				setOpen(false);
-				toast.error("Error creating wish", { id: toastId });
+				toast.error("Error editing wish", { id: toastId });
 			});
 	}
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild>
-				<Button variant="default">Add wish</Button>
-			</DialogTrigger>
 			<DialogContent className="sm:max-w-md">
 				<DialogHeader>
-					<DialogTitle>Add wish</DialogTitle>
-					<DialogDescription>Fill out the form below to add a wish to your wishlist.</DialogDescription>
+					<DialogTitle>Edit wish</DialogTitle>
+					<DialogDescription>Edit something about your wish and click save</DialogDescription>
 				</DialogHeader>
 				<div className="flex items-center space-x-2 w-full">
 					<Form {...form}>
@@ -194,8 +231,11 @@ export function AddWishModal({ wishlist_id }: Props) {
 								/>
 							</div>
 							<DialogFooter>
+								<Button variant={"outline"} onClick={() => setOpen(false)}>
+									Cancel
+								</Button>
 								<Button variant={"default"} type="submit">
-									Add
+									Save
 								</Button>
 							</DialogFooter>
 						</form>

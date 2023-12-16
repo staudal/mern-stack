@@ -8,6 +8,9 @@ type Query {
 	wish(id: ID!): Wish
 	wishes: [Wish]
 	wishesByWishlist(wishlist_id: ID!): [Wish]
+
+	# Queries for profile
+	profileByUser(user_id: ID!): Profile
 }
 
 type Mutation {
@@ -19,7 +22,22 @@ type Mutation {
 	# Mutations for wish
 	createWish(wishlist_id: ID!, name: String!, description: String!, price: Float!, link: String!, img_url: String!): Wish
 	deleteWish(id: ID!): Boolean
-	updateWish(id: ID!, name: String, description: String, price: Float, link: String): Wish
+	updateWish(id: ID!, name: String!, description: String!, price: Float!, link: String!, img_url: String!): Wish
+	updateWishOrder(wishlist_id: ID!, wishes: [WishInput!]!): [Wish!]!
+
+	# Mutations for profile
+	createProfile(user_id: ID!, first_name: String!, last_name: String!, profile_img_url: String!): Profile
+	updateProfileImageUrl(user_id: ID!, profile_img_url: String): Profile
+}
+
+input WishInput {
+	id: ID!
+	name: String
+	description: String
+	price: Float
+	link: String
+	img_url: String
+	order: Int
 }
 
 type Wishlist {
@@ -38,4 +56,13 @@ type Wish {
 	price: Float
 	link: String
 	img_url: String
+	order: Int
+}
+
+type Profile {
+	id: ID
+	user_id: ID
+	first_name: String
+	last_name: String
+	profile_img_url: String
 }

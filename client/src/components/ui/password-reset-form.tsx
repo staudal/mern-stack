@@ -1,5 +1,8 @@
-import { useState, useContext, useEffect } from "react";
+import * as React from "react";
+
+import { useContext } from "react";
 import { cn } from "../../lib/lib";
+import { FaGithub } from "react-icons/fa";
 import { Button } from "./button";
 import { Input } from "./input";
 import { Label } from "./label";
@@ -7,32 +10,40 @@ import { UserContext } from "../../App";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
-interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
+interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {
+	token: string | null;
+	tokenId: string | null;
+}
 
-export function UserRegisterForm({ className, ...props }: UserAuthFormProps) {
+export function PasswordResetForm({ className, ...props }: UserAuthFormProps) {
 	const userContext = useContext(UserContext);
 	if (!userContext) return null;
-	const { app, isLoggedIn, setUserEmail } = userContext;
-	const [email, setEmail] = useState("");
-	const [password, setPassword] = useState("");
+	const { app, isLoggedIn } = userContext;
+	const [password, setPassword] = React.useState("");
+	const [passwordConfirm, setPasswordConfirm] = React.useState("");
 	const navigate = useNavigate();
 
-	useEffect(() => {
+	React.useEffect(() => {
 		if (isLoggedIn) {
 			navigate("/");
+		} else if (!props.token || !props.tokenId) {
+			navigate("/login");
+			toast.error("Invalid password reset link!");
 		}
 	}, [isLoggedIn]);
 
 	async function onSubmit(event: React.SyntheticEvent) {
 		event.preventDefault();
-		const toastId = toast.loading("Creating account...");
+		const toastId = toast.loading("Resetting password...");
+		if (password !== passwordConfirm) {
+			toast.error("Passwords do not match!", { id: toastId });
+			return;
+		}
 		await app.emailPasswordAuth
-			.registerUser({ email, password })
+			.resetPassword({ token: props.token, tokenId: props.tokenId, password: password })
 			.then(() => {
-				localStorage.setItem("status", "pending");
-				setUserEmail(email);
-				navigate("/confirm");
-				toast.success("Account created! Please check your email for a confirmation link.", { id: toastId });
+				toast.success("Password reset!", { id: toastId });
+				navigate("/login");
 			})
 			.catch((err) => {
 				const errorMessageParts = err.message.split(":");
@@ -52,25 +63,23 @@ export function UserRegisterForm({ className, ...props }: UserAuthFormProps) {
 							Email
 						</Label>
 						<Input
-							id="email"
-							placeholder="Email"
-							type="email"
-							autoCapitalize="none"
-							autoComplete="email"
-							autoCorrect="off"
-							onChange={(e) => setEmail(e.target.value)}
-						/>
-						<Input
 							id="password"
-							placeholder="Password"
+							placeholder="New Password"
 							type="password"
 							autoCapitalize="none"
-							autoComplete="password"
 							autoCorrect="off"
 							onChange={(e) => setPassword(e.target.value)}
 						/>
+						<Input
+							id="password"
+							placeholder="Confirm Password"
+							type="password"
+							autoCapitalize="none"
+							autoCorrect="off"
+							onChange={(e) => setPasswordConfirm(e.target.value)}
+						/>
 					</div>
-					<Button>Join</Button>
+					<Button>Reset Password</Button>
 				</div>
 			</form>
 			{/* <div className="relative">

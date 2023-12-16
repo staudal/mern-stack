@@ -18,7 +18,7 @@ export default function Wishlists() {
 
 	return (
 		<div>
-			<div className="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8 gap-6 flex flex-col">
+			<div className="mx-auto max-w-7xl py-6 px-6 lg:px-8 gap-6 flex flex-col">
 				<WishlistsHeader />
 				<WishlistsTable />
 			</div>

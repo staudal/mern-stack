@@ -13,6 +13,9 @@ const resolvers = {
 	Wish: {
 		id: (parent) => parent.id ?? parent._id,
 	},
+	Profile: {
+		id: (parent) => parent.id ?? parent._id,
+	},
 	Query: {
 		async wishlist(_, { id }) {
 			let collection = await db.collection("wishlists");
@@ -41,10 +44,15 @@ const resolvers = {
 			const wishes = await collection.find({}).toArray();
 			return wishes;
 		},
-		async wishesByWishlist(_, { wishlist_id }) {
+		wishesByWishlist: async (_, { wishlist_id }) => {
 			let collection = await db.collection("wishes");
-			const wishes = await collection.find({ wishlist_id: new ObjectId(wishlist_id) }).toArray();
-			return wishes;
+			let wishes = await collection.find({ wishlist_id: new ObjectId(wishlist_id) }).toArray();
+			return wishes.sort((a, b) => a.order - b.order);
+		},
+		async profileByUser(_, { user_id }) {
+			let collection = await db.collection("profiles");
+			const profile = await collection.findOne({ user_id });
+			return profile;
 		},
 	},
 	Mutation: {
@@ -72,9 +80,13 @@ const resolvers = {
 		},
 		async createWish(_, { wishlist_id, name, description, price, link, img_url }) {
 			let collection = await db.collection("wishes");
-			let insert = await collection.insertOne({ wishlist_id: new ObjectId(wishlist_id), name, description, price, link, img_url });
 
-			if (insert.acknowledged) return { wishlist_id, name, description, price, link, img_url, id: insert.insertedId };
+			// Get the current count of wishes in the wishlist
+			let order = await collection.countDocuments({ wishlist_id: new ObjectId(wishlist_id) });
+
+			let insert = await collection.insertOne({ wishlist_id: new ObjectId(wishlist_id), name, description, price, link, img_url, order });
+
+			if (insert.acknowledged) return { wishlist_id, name, description, price, link, img_url, id: insert.insertedId, order };
 
 			return null;
 		},
@@ -106,6 +118,32 @@ const resolvers = {
 			}
 
 			return false;
+		},
+		async updateProfileImageUrl(_, args) {
+			const user_id = args.user_id;
+			let collection = await db.collection("profiles");
+			const update = await collection.updateOne({ user_id }, { $set: { ...args } }, { upsert: true });
+
+			if (update.acknowledged) return await collection.findOne({ user_id });
+
+			return null;
+		},
+		updateWishOrder: async (_, { wishlist_id, wishes }) => {
+			if (wishes.length === 0) return [];
+
+			let collection = await db.collection("wishes");
+
+			let bulkOperations = wishes.map((wish, i) => ({
+				updateOne: {
+					filter: { _id: new ObjectId(wish.id) },
+					update: { $set: { order: i } },
+				},
+			}));
+
+			await collection.bulkWrite(bulkOperations);
+
+			let updatedWishes = await collection.find({ wishlist_id: new ObjectId(wishlist_id) }).toArray();
+			return updatedWishes.sort((a, b) => a.order - b.order);
 		},
 	},
 };

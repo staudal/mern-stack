@@ -1,4 +1,3 @@
-import { Button } from "./ui/button";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -8,26 +7,26 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-	AlertDialogTrigger,
 } from "./ui/alert-dialog";
 import { DELETE_WISH, GET_WISHES_BY_WISHLIST, GET_WISHLISTS_BY_USER } from "../queries";
 import { useMutation } from "@apollo/client";
 import { toast } from "react-hot-toast";
-import { useContext, useState } from "react";
+import { useContext } from "react";
 import { UserContext } from "../App";
 
 interface Props {
 	wish_id: string;
 	wishlist_id: string;
+	open: boolean;
+	setOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export function DialogCloseButton({ wish_id, wishlist_id }: Props) {
+export function DialogCloseButton({ wish_id, wishlist_id, open, setOpen }: Props) {
 	const userContext = useContext(UserContext);
 	if (!userContext) return null;
 	const { user } = userContext;
 
 	const [deleteWish] = useMutation(DELETE_WISH);
-	const [open, setOpen] = useState(false);
 
 	function handleDeleteWish(id: string): void {
 		const toastId = toast.loading("Loading...");
@@ -50,9 +49,6 @@ export function DialogCloseButton({ wish_id, wishlist_id }: Props) {
 
 	return (
 		<AlertDialog open={open} onOpenChange={setOpen}>
-			<AlertDialogTrigger asChild>
-				<Button variant="destructive">Remove</Button>
-			</AlertDialogTrigger>
 			<AlertDialogContent>
 				<AlertDialogHeader>
 					<AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>

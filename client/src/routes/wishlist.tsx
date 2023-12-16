@@ -1,22 +1,17 @@
-import { useContext, useEffect, useState } from "react";
-import { UserContext } from "../App";
-import { useNavigate } from "react-router-dom";
 import { useQuery } from "@apollo/client";
-import WishlistHeader from "../components/wishlist_header";
-import Wishes from "../components/wishes";
+import WishesLoggedIn from "../components/wishes";
 import { GET_WISHLIST } from "../queries";
+import NotFound from "../components/notfound";
+import { useContext } from "react";
+import { UserContext } from "../App";
+import WishesNotLoggedIn from "../components/wishes_not_logged_in";
+import WishlistHeaderNotLoggedIn from "../components/wishlist_header_not_logged_in";
+import WishlistHeaderLoggedIn from "../components/wishlist_header";
 
 export default function Wishlist() {
-	const navigate = useNavigate();
 	const userContext = useContext(UserContext);
 	if (!userContext) return null;
 	const { isLoggedIn } = userContext;
-
-	useEffect(() => {
-		if (!isLoggedIn) {
-			navigate("/login");
-		}
-	}, [isLoggedIn]);
 
 	// get id from url
 	const url = window.location.href;
@@ -32,13 +27,17 @@ export default function Wishlist() {
 				<h1>Loading...</h1>
 			</div>
 		);
-	if (error) return <p>Error</p>;
+	if (error) return <NotFound />;
 
 	return (
 		<div>
 			<div className="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8 gap-6 flex flex-col">
-				<WishlistHeader wishlist_id={data.wishlist.id} wishlist_name={data.wishlist.name} />
-				<Wishes wishlist_id={data.wishlist.id} />
+				{isLoggedIn ? (
+					<WishlistHeaderLoggedIn wishlist_id={data.wishlist.id} wishlist_name={data.wishlist.name} />
+				) : (
+					<WishlistHeaderNotLoggedIn wishlist_name={data.wishlist.name} />
+				)}
+				{isLoggedIn ? <WishesLoggedIn wishlist_id={data.wishlist.id} /> : <WishesNotLoggedIn wishlist_id={data.wishlist.id} />}
 			</div>
 		</div>
 	);
